@@ -40,20 +40,20 @@ while i <= #arguments do
     local parameter = arguments[i]
 
     if parameter == "--output" then
-        options.output_dir, i = argument_value(arg, i)
+        options.output_dir, i = argument_value(arguments, i)
         if not options.output_dir then
             error("--output requires a directory")
         end
     elseif parameter == "--max-resources" then
         local value
-        value, i = argument_value(arg, i)
+        value, i = argument_value(arguments, i)
         options.max_resources = tonumber(value)
         if not options.max_resources then
             error("--max-resources requires a number")
         end
     elseif parameter == "--timeout" then
         local value
-        value, i = argument_value(arg, i)
+        value, i = argument_value(arguments, i)
         options.timeout = tonumber(value)
         if not options.timeout then
             error("--timeout requires milliseconds")
