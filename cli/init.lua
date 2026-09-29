@@ -12,7 +12,15 @@ local function argument_value(arguments, index)
     return arguments[index + 1], index + 1
 end
 
-local url = arg[1]
+-- Luvit exposes command-line arguments through the zero-indexed global
+-- args table. args[1] is the script path (cli or init.lua), so
+-- application arguments begin at args[2].
+local arguments = {}
+for index = 2, #args do
+    arguments[#arguments + 1] = args[index]
+end
+
+local url = arguments[1]
 if not url or url == "--help" or url == "-h" then
     usage()
     if not url then
@@ -28,8 +36,8 @@ local options = {
 }
 
 local i = 2
-while i <= #arg do
-    local parameter = arg[i]
+while i <= #arguments do
+    local parameter = arguments[i]
 
     if parameter == "--output" then
         options.output_dir, i = argument_value(arg, i)
