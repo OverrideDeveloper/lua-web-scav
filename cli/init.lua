@@ -5,6 +5,7 @@ local function usage()
     print("")
     print("Usage:")
     print("  luvit cli <url> [--output <directory>] [--max-resources <number>] [--timeout <milliseconds>]")
+    print("             [--scope <same-site|same-host|any>] [--allow-host <host>]")
     print("")
 end
 
@@ -33,6 +34,8 @@ local options = {
     output_dir = "scavenged",
     max_resources = 100,
     timeout = 10000,
+    scope = "same-site",
+    allowed_hosts = {},
 }
 
 local i = 2
@@ -58,6 +61,20 @@ while i <= #arguments do
         if not options.timeout then
             error("--timeout requires milliseconds")
         end
+    elseif parameter == "--scope" then
+        options.scope, i = argument_value(arguments, i)
+        if options.scope ~= "same-site"
+            and options.scope ~= "same-host"
+            and options.scope ~= "any" then
+            error("--scope must be same-site, same-host, or any")
+        end
+    elseif parameter == "--allow-host" then
+        local host
+        host, i = argument_value(arguments, i)
+        if not host then
+            error("--allow-host requires a hostname")
+        end
+        options.allowed_hosts[#options.allowed_hosts + 1] = host
     else
         error("unknown argument: " .. parameter)
     end
@@ -80,9 +97,9 @@ crawler:on("error", function(err, error_url)
     print(string.format("[error] %s: %s", error_url or "", tostring(err)))
 end)
 
-crawler:on("done", function(resources)
+crawler:on("done", function(resources, reason)
     print("")
-    print("Scavenging complete.")
+    print("Scavenging complete (" .. tostring(reason) .. ").")
     print("Resources gathered: " .. tostring(#resources))
 end)
 

@@ -50,6 +50,30 @@ assert_equal(
 )
 
 assert_equal(
+    scav.is_http_url("https://example.com/path"),
+    true,
+    "valid HTTP URL"
+)
+
+assert_equal(
+    scav.is_http_url("https://ssl'"),
+    false,
+    "malformed hostname"
+)
+
+assert_equal(
+    scav.is_http_url("https://example.com/{{ url }}"),
+    false,
+    "template URL"
+)
+
+assert_equal(
+    scav.is_http_url("http://www')"),
+    false,
+    "malformed hostname punctuation"
+)
+
+assert_equal(
     scav.classify("https://example.com/data.txt_extra", {}),
     "txt",
     "underscored TXT suffix"
@@ -81,5 +105,63 @@ end
 
 assert_equal(nearby_seen["https://example.com/data/report12.txt"], true, "extension mutation")
 assert_equal(nearby_seen["https://example.com/data/report13.txt"], true, "numeric neighbor")
+
+local crawler = scav.new()
+crawler:start("https://www.example.com/index.html")
+
+assert_equal(
+    crawler:allowed_url("https://example.com/data.txt"),
+    true,
+    "same-site root host"
+)
+
+assert_equal(
+    crawler:allowed_url("https://cdn.example.com/data.txt"),
+    true,
+    "same-site subdomain"
+)
+
+assert_equal(
+    crawler:allowed_url("https://example.net/data.txt"),
+    false,
+    "cross-site URL"
+)
+
+local host_crawler = scav.new({ scope = "same-host" })
+host_crawler:start("https://www.example.com/index.html")
+
+assert_equal(
+    host_crawler:allowed_url("https://example.com/data.txt"),
+    false,
+    "same-host rejects alternate root host"
+)
+
+assert_equal(
+    host_crawler:allowed_url("https://cdn.example.com/data.txt"),
+    false,
+    "same-host rejects subdomain"
+)
+
+local scoped_crawler = scav.new({
+    scope = "same-host",
+    allowed_hosts = { "cdn.example.com" },
+})
+scoped_crawler:start("https://www.example.com/index.html")
+
+assert_equal(
+    scoped_crawler:allowed_url("https://cdn.example.com/data.txt"),
+    true,
+    "explicit allowed host"
+)
+
+local finished_reason
+local limit_crawler = scav.new({ max_resources = 1 })
+limit_crawler:on("done", function(_, reason)
+    finished_reason = reason
+end)
+limit_crawler.fetched = 1
+limit_crawler:step()
+
+assert_equal(finished_reason, "max_resources", "resource limit completion")
 
 print("web-scav tests passed")

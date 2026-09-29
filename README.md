@@ -47,6 +47,7 @@ By default it writes gathered resources under scavenged/.
 Useful options:
 
     luvit cli <url> --output <directory> --max-resources <number> --timeout <milliseconds>
+    luvit cli <url> --scope <same-site|same-host|any> --allow-host <host>
 
 ## Library
 
@@ -56,6 +57,8 @@ Useful options:
         output_dir = "scavenged",
         timeout = 10000,
         max_resources = 100,
+        scope = "same-site",
+        allowed_hosts = { "downloads.example.com" },
     })
 
     crawler:on("resource", function(resource)
@@ -84,6 +87,38 @@ The initial implementation discovers:
 - a small set of nearby TXT filename mutations
 
 Redirects are followed by the scavenger rather than by the transport layer.
+
+### Crawl scope
+
+The default scope is `same-site`. This keeps discovery on the seed site's
+hostname/domain family while still allowing common `www` and subdomain
+variants, such as `www.example.com`, `example.com`, and
+`docs.example.com`. Unrelated domains found in HTML, such as CDN, analytics,
+or social-media links, are not queued.
+
+For stricter crawling, use `same-host`:
+
+    luvit cli https://example.com/ --scope same-host
+
+To intentionally permit an additional host while retaining the default
+same-site boundary, add `--allow-host`:
+
+    luvit cli https://example.com/ --allow-host downloads.example.net
+
+Use `--scope any` only when unrestricted cross-domain discovery is desired:
+
+    luvit cli https://example.com/ --scope any
+
+The library exposes the same controls through `scope` and `allowed_hosts`.
+
+URL candidates are also rejected when they contain whitespace, template
+markers such as `{{ url }}`, malformed HTTP authorities, or unsupported
+authority forms. This keeps JavaScript/template artifacts from becoming
+crawl targets.
+
+The first implementation uses a lightweight hostname-based same-site rule
+rather than bundling the Public Suffix List. Explicit `allowed_hosts` entries
+are available when a site needs a cross-domain resource.
 
 The URL mutation behavior is deliberately modest. It is an experiment in
 resource neighborhood discovery, not an attempt to guess every possible URL
