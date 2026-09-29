@@ -40,7 +40,8 @@ local function classify_extension(url)
     -- Some resource endpoints add a format or encoding suffix after the
     -- actual resource extension, e.g. Gutenberg's .txt.utf-8.
     for resource_extension, kind in pairs(RESOURCE_EXTENSIONS) do
-        if path:match("%." .. resource_extension .. "([%.%-_]|$)") then
+        if path:match("%." .. resource_extension .. "[%._-]")
+            or path:match("%." .. resource_extension .. "$") then
             return kind
         end
     end
