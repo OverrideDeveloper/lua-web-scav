@@ -43,6 +43,18 @@ assert_equal(
     "compound TXT extension"
 )
 
+assert_equal(
+    scav.classify("https://example.com/data.txt-utf8", {}),
+    "txt",
+    "hyphenated TXT suffix"
+)
+
+assert_equal(
+    scav.classify("https://example.com/data.txt_extra", {}),
+    "txt",
+    "underscored TXT suffix"
+)
+
 local discovered = scav.discover_urls(
     [[
         <a href="/one.txt">one</a>
