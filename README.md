@@ -57,6 +57,8 @@ Useful options:
         output_dir = "scavenged",
         timeout = 10000,
         max_resources = 100,
+        scope = "same-site",
+        allowed_hosts = { "downloads.example.com" },
     })
 
     crawler:on("resource", function(resource)
