@@ -2,7 +2,7 @@
 -- A small web resource scavenger built on lua-webcall-model.
 
 local fs = require("fs")
-local webcall = require("vendor.lua-webcall-model.webcall")
+local webcall = require("./vendor/lua-webcall-model/webcall")
 
 local M = {}
 
