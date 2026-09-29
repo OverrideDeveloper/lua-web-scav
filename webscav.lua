@@ -359,8 +359,8 @@ function Scavenger:allowed_url(url)
     end
 
     if self.scope == "same-site" then
-        return host == self.site_host
-            or host:sub(-( #self.site_host + 1)) == "." .. self.site_host
+        return host == self.site_domain
+            or host:sub(-( #self.site_domain + 1)) == "." .. self.site_domain
     end
 
     return false
@@ -504,7 +504,8 @@ function Scavenger:start(url)
     assert(is_http_url(url), "start URL must be an http:// or https:// URL")
 
     local host = authority_host(url)
-    self.site_host = host:gsub("^www%.", "")
+    self.site_host = host
+    self.site_domain = host:gsub("^www%.", "")
     self.stopped = false
     self:enqueue(url)
     self:step()
@@ -537,6 +538,7 @@ function M.new(options)
         scope = options.scope or "same-site",
         allowed_hosts = allowed_host_set,
         site_host = nil,
+        site_domain = nil,
 
         queue = {},
         position = 1,
