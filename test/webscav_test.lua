@@ -132,8 +132,14 @@ host_crawler:start("https://www.example.com/index.html")
 
 assert_equal(
     host_crawler:allowed_url("https://example.com/data.txt"),
+    true,
+    "same-host canonical root host"
+)
+
+assert_equal(
+    host_crawler:allowed_url("https://cdn.example.com/data.txt"),
     false,
-    "same-host rejects alternate host"
+    "same-host rejects subdomain"
 )
 
 local scoped_crawler = scav.new({
@@ -147,5 +153,15 @@ assert_equal(
     true,
     "explicit allowed host"
 )
+
+local finished_reason
+local limit_crawler = scav.new({ max_resources = 1 })
+limit_crawler:on("done", function(_, reason)
+    finished_reason = reason
+end)
+limit_crawler.fetched = 1
+limit_crawler:step()
+
+assert_equal(finished_reason, "max_resources", "resource limit completion")
 
 print("web-scav tests passed")
