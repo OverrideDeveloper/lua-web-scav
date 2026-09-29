@@ -133,8 +133,49 @@ local function resolve_url(base_url, target)
     return scheme .. "://" .. authority .. normalize_path(directory .. "/" .. target)
 end
 
+local function authority_host(url)
+    local _, authority = split_url(url)
+    if not authority or authority:find("@", 1, true) then
+        return nil
+    end
+
+    if authority:sub(1, 1) == "[" then
+        return nil
+    end
+
+    local host = authority
+    local port = authority:match("^(.+):(%d+)$")
+    if port then
+        host = authority:match("^(.+):%d+$")
+    elseif authority:find(":", 1, true) then
+        return nil
+    end
+
+    if not host
+        or host == ""
+        or host:match("[^%w%._%-]")
+        or host:match("^%.")
+        or host:match("%.$")
+        or host:match("%.%.") then
+        return nil
+    end
+
+    return lower(host)
+end
+
 local function is_http_url(url)
-    return type(url) == "string" and url:match("^https?://") ~= nil
+    if type(url) ~= "string"
+        or url:find("[%c%s]")
+        or url:find("{{", 1, true)
+        or url:find("}}", 1, true) then
+        return false
+    end
+
+    if not url:match("^https?://") then
+        return false
+    end
+
+    return authority_host(url) ~= nil
 end
 
 local function unique_append(list, seen, value)
@@ -285,10 +326,50 @@ function Scavenger:emit(event, ...)
     end
 end
 
+function Scavenger:finish(reason)
+    if self.stopped then
+        return false
+    end
+
+    self.stopped = true
+    self:emit("done", self.resources, reason)
+    return true
+end
+
+function Scavenger:allowed_url(url)
+    if not is_http_url(url) then
+        return false
+    end
+
+    if self.scope == "any" then
+        return true
+    end
+
+    local host = authority_host(url)
+    if not host then
+        return false
+    end
+
+    if self.allowed_hosts[host] then
+        return true
+    end
+
+    if self.scope == "same-host" then
+        return host == self.site_host
+    end
+
+    if self.scope == "same-site" then
+        return host == self.site_host
+            or host:sub(-( #self.site_host + 1)) == "." .. self.site_host
+    end
+
+    return false
+end
+
 function Scavenger:enqueue(url)
     url = strip_fragment(url)
 
-    if not is_http_url(url) or self.queued[url] then
+    if not self:allowed_url(url) or self.queued[url] then
         return false
     end
 
@@ -395,14 +476,18 @@ function Scavenger:process(url, response, err)
 end
 
 function Scavenger:step()
-    if self.stopped or self.fetched >= self.max_resources then
+    if self.stopped then
+        return false
+    end
+
+    if self.fetched >= self.max_resources then
+        self:finish("max_resources")
         return false
     end
 
     local url = self:next()
     if not url then
-        self.stopped = true
-        self:emit("done", self.resources)
+        self:finish("exhausted")
         return false
     end
 
@@ -417,6 +502,9 @@ end
 
 function Scavenger:start(url)
     assert(is_http_url(url), "start URL must be an http:// or https:// URL")
+
+    local host = authority_host(url)
+    self.site_host = host:gsub("^www%.", "")
     self.stopped = false
     self:enqueue(url)
     self:step()
@@ -424,12 +512,20 @@ function Scavenger:start(url)
 end
 
 function Scavenger:stop()
-    self.stopped = true
+    self:finish("stopped")
     return self
 end
 
 function M.new(options)
     options = options or {}
+
+    local allowed_hosts = options.allowed_hosts or {}
+    local allowed_host_set = {}
+
+    for _, host in ipairs(allowed_hosts) do
+        host = lower(host):gsub("^https?://", "")
+        allowed_host_set[host] = true
+    end
 
     return setmetatable({
         output_dir = options.output_dir or "scavenged",
@@ -437,6 +533,10 @@ function M.new(options)
         max_resources = options.max_resources or 100,
         headers = options.headers,
         mutate = options.mutate or nearby_txt_urls,
+
+        scope = options.scope or "same-site",
+        allowed_hosts = allowed_host_set,
+        site_host = nil,
 
         queue = {},
         position = 1,
@@ -450,6 +550,8 @@ end
 
 M.classify = classify
 M.discover_urls = discover_urls
+M.is_http_url = is_http_url
+M.authority_host = authority_host
 M.nearby_txt_urls = nearby_txt_urls
 M.resolve_url = resolve_url
 
