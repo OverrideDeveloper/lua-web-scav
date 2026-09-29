@@ -34,6 +34,20 @@ local function extension(url)
     return value and value:lower() or nil
 end
 
+local function classify_extension(url)
+    local path = lower((url or ""):match("^([^?#]*)") or "")
+
+    -- Some resource endpoints add a format or encoding suffix after the
+    -- actual resource extension, e.g. Gutenberg's .txt.utf-8.
+    for resource_extension, kind in pairs(RESOURCE_EXTENSIONS) do
+        if path:match("%." .. resource_extension .. "([%.%-_]|$)") then
+            return kind
+        end
+    end
+
+    return RESOURCE_EXTENSIONS[extension(url)]
+end
+
 local function classify(url, headers)
     local content_type = lower(headers and (headers["content-type"] or headers["Content-Type"]))
     content_type = content_type:match("^([^;]+)") or content_type
@@ -42,7 +56,7 @@ local function classify(url, headers)
         return CONTENT_TYPES[content_type]
     end
 
-    return RESOURCE_EXTENSIONS[extension(url)]
+    return classify_extension(url)
 end
 
 local function strip_fragment(url)
