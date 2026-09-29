@@ -37,6 +37,12 @@ assert_equal(
     "JSON content type"
 )
 
+assert_equal(
+    scav.classify("https://www.gutenberg.org/ebooks/2641.txt.utf-8", {}),
+    "txt",
+    "compound TXT extension"
+)
+
 local discovered = scav.discover_urls(
     [[
         <a href="/one.txt">one</a>
