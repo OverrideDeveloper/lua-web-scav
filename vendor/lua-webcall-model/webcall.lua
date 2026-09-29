@@ -84,12 +84,6 @@ local function request(options, callback)
     local headers = copy_table(options.headers)
     local body = options.body
 
-    -- Keep responses predictable for small, transport-only consumers.
-    -- In particular, avoid negotiated compression because this module does
-    -- not decode compressed response bodies.
-    if headers["Accept-Encoding"] == nil and headers["accept-encoding"] == nil then
-        headers["Accept-Encoding"] = "identity"
-    end
 
     if body ~= nil and type(body) ~= "string" then
         done(nil, "request body must be a string")
