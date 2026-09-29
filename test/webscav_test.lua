@@ -132,8 +132,8 @@ host_crawler:start("https://www.example.com/index.html")
 
 assert_equal(
     host_crawler:allowed_url("https://example.com/data.txt"),
-    true,
-    "same-host canonical root host"
+    false,
+    "same-host rejects alternate root host"
 )
 
 assert_equal(
