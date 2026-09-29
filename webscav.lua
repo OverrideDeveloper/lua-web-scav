@@ -358,6 +358,13 @@ function Scavenger:process(url, response, err)
     if kind then
         self:collect(url, response, kind)
 
+        -- Resource bodies can themselves contain paths to more resources.
+        -- Keep discovery separate from collection so XML/JSON/TXT can all
+        -- participate in the next scavenging step.
+        for _, discovered in ipairs(discover_urls(response.body or "", url)) do
+            self:enqueue(discovered)
+        end
+
         if kind == "txt" then
             for _, candidate in ipairs(self.mutate(url, response) or {}) do
                 self:enqueue(candidate)
