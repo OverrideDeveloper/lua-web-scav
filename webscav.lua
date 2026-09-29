@@ -520,6 +520,12 @@ end
 function M.new(options)
     options = options or {}
 
+    local scope = options.scope or "same-site"
+    assert(
+        scope == "same-site" or scope == "same-host" or scope == "any",
+        "scope must be same-site, same-host, or any"
+    )
+
     local allowed_hosts = options.allowed_hosts or {}
     local allowed_host_set = {}
 
@@ -535,7 +541,7 @@ function M.new(options)
         headers = options.headers,
         mutate = options.mutate or nearby_txt_urls,
 
-        scope = options.scope or "same-site",
+        scope = scope,
         allowed_hosts = allowed_host_set,
         site_host = nil,
         site_domain = nil,
