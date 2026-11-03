@@ -164,4 +164,26 @@ limit_crawler:step()
 
 assert_equal(finished_reason, "max_resources", "resource limit completion")
 
+
+assert_equal(
+    scav.resolve_url("https://example.com/catalog/page.html?old=1", "?download=1"),
+    "https://example.com/catalog/page.html?download=1",
+    "query-only URL"
+)
+
+local extra_discovered = scav.discover_urls(
+    [[
+        <a data-href="/download/book.txt">download</a>
+        <img srcset="/images/cover.jpg 1x, /images/cover@2x.jpg 2x">
+        <form action="../export.xml"></form>
+    ]],
+    "https://example.com/catalog/index.html"
+)
+local extra_seen = {}
+for _, url in ipairs(extra_discovered) do extra_seen[url] = true end
+assert_equal(extra_seen["https://example.com/download/book.txt"], true, "discover data-href")
+assert_equal(extra_seen["https://example.com/images/cover.jpg"], true, "discover first srcset URL")
+assert_equal(extra_seen["https://example.com/images/cover@2x.jpg"], true, "discover second srcset URL")
+assert_equal(extra_seen["https://example.com/export.xml"], true, "discover form action")
+
 print("web-scav tests passed")
