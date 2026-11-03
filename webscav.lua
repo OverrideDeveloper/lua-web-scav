@@ -327,13 +327,24 @@ function Scavenger:emit(event, ...)
 end
 
 function Scavenger:finish(reason)
-    if self.stopped then
-        return false
-    end
-
+    if self.done_emitted then return false end
+    self.stop_reason = reason or self.stop_reason or "exhausted"
     self.stopped = true
-    self:emit("done", self.resources, reason)
+    if (self.pending_writes or 0) > 0 then
+        self.finish_pending = true
+        return true
+    end
+    self.done_emitted = true
+    self:emit("done", self.resources, self.stop_reason)
     return true
+end
+
+function Scavenger:write_finished()
+    self.pending_writes = math.max(0, (self.pending_writes or 0) - 1)
+    if self.stopped and self.finish_pending and self.pending_writes == 0 then
+        self.finish_pending = false
+        self:finish(self.stop_reason)
+    end
 end
 
 function Scavenger:allowed_url(url)
@@ -402,21 +413,24 @@ end
 function Scavenger:collect(url, response, kind)
     local resource = {
         url = url,
+        source_url = url,
         kind = kind,
         status = response.status,
+        content_type = response.headers and (response.headers["content-type"] or response.headers["Content-Type"]),
         body = response.body,
     }
 
+    self.pending_writes = (self.pending_writes or 0) + 1
     write_resource(self.output_dir, url, kind, response.body, function(path, err)
         if err then
             resource.error = err
             self:emit("error", err, url)
-            return
+        else
+            resource.path = path
+            self.resources[#self.resources + 1] = resource
+            self:emit("resource", resource)
         end
-
-        resource.path = path
-        self.resources[#self.resources + 1] = resource
-        self:emit("resource", resource)
+        self:write_finished()
     end)
 end
 
@@ -507,6 +521,10 @@ function Scavenger:start(url)
     self.site_host = host
     self.site_domain = host:gsub("^www%.", "")
     self.stopped = false
+    self.done_emitted = false
+    self.finish_pending = false
+    self.stop_reason = nil
+    self.pending_writes = 0
     self:enqueue(url)
     self:step()
     return self
@@ -551,6 +569,9 @@ function M.new(options)
         queued = {},
         fetched = 0,
         resources = {},
+        pending_writes = 0,
+        finish_pending = false,
+        done_emitted = false,
         stopped = false,
         listeners = {},
     }, Scavenger)
