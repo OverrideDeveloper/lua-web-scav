@@ -467,8 +467,10 @@ function Scavenger:enqueue_discovered(url)
         return false
     end
 
-    -- Put known gatherable formats ahead of extensionless HTML navigation.
-    if classify_extension(url) then
+    -- Text is the primary target for this scavenger. Put TXT candidates
+    -- ahead of feeds and extensionless HTML navigation; leave other supported
+    -- formats in normal discovery order.
+    if classify_extension(url) == "txt" then
         return self:enqueue_priority(url)
     end
 
