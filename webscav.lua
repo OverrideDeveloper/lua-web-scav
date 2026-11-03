@@ -302,7 +302,11 @@ end
 
 local function mkdir(path, callback)
     fs.mkdir(path, function(err)
-        if not err or tostring(err):match("exist") then
+        -- Luvit/OS error codes may be uppercase (for example EEXIST).
+        -- Normalize before checking so repeated scavenging runs can reuse
+        -- their output directory.
+        local message = err and lower(tostring(err)) or ""
+        if not err or message:find("exist", 1, true) then
             callback()
             return
         end
