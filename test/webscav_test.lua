@@ -164,6 +164,41 @@ limit_crawler:step()
 
 assert_equal(finished_reason, "max_resources", "resource limit completion")
 
+-- A redirect must be processed before unrelated URLs already waiting in the
+-- discovery queue (for example, Gutenberg's EPUB image endpoints).
+local redirect_crawler = scav.new()
+redirect_crawler.site_host = "www.gutenberg.org"
+redirect_crawler.site_domain = "gutenberg.org"
+redirect_crawler.queue = {
+    "https://www.gutenberg.org/ebooks/75948.txt.utf-8",
+    "https://www.gutenberg.org/ebooks/75948.epub.images",
+}
+redirect_crawler.queued = {
+    ["https://www.gutenberg.org/ebooks/75948.txt.utf-8"] = true,
+    ["https://www.gutenberg.org/ebooks/75948.epub.images"] = true,
+}
+redirect_crawler.position = 2
+redirect_crawler:process(
+    "https://www.gutenberg.org/ebooks/75948.txt.utf-8",
+    {
+        status = 302,
+        headers = {
+            location = "/cache/epub/75948/pg75948.txt",
+        },
+        body = "",
+    },
+    "HTTP request failed with status 302"
+)
+assert_equal(
+    redirect_crawler:next(),
+    "https://www.gutenberg.org/cache/epub/75948/pg75948.txt",
+    "redirect target takes priority over queued assets"
+)
+assert_equal(
+    redirect_crawler:next(),
+    "https://www.gutenberg.org/ebooks/75948.epub.images",
+    "queued assets remain after redirect target"
+)
 
 assert_equal(
     scav.resolve_url("https://example.com/catalog/page.html?old=1", "?download=1"),
