@@ -127,6 +127,40 @@ assert_equal(
     "cross-site URL"
 )
 
+local selective_crawler = scav.new()
+selective_crawler.site_host = "www.gutenberg.org"
+selective_crawler.site_domain = "gutenberg.org"
+assert_equal(
+    selective_crawler:enqueue_discovered("https://www.gutenberg.org/ebooks/75948.txt.utf-8"),
+    true,
+    "enqueue supported TXT resource"
+)
+assert_equal(
+    selective_crawler:enqueue_discovered("https://www.gutenberg.org/ebooks/75948.epub3.images"),
+    false,
+    "skip EPUB image package"
+)
+assert_equal(
+    selective_crawler:enqueue_discovered("https://www.gutenberg.org/ebooks/send/gdrive/75948.epub3.images"),
+    false,
+    "skip download-provider endpoint"
+)
+assert_equal(
+    selective_crawler:enqueue_discovered("https://www.gutenberg.org/gutenberg/globals.css"),
+    false,
+    "skip stylesheet"
+)
+assert_equal(
+    selective_crawler:enqueue_discovered("https://www.gutenberg.org/about/"),
+    true,
+    "retain extensionless HTML navigation"
+)
+assert_equal(
+    selective_crawler:enqueue_discovered("https://www.gutenberg.org/ebooks/75948.opds"),
+    true,
+    "retain supported OPDS XML feed"
+)
+
 local host_crawler = scav.new({ scope = "same-host" })
 host_crawler:start("https://www.example.com/index.html")
 
