@@ -74,7 +74,10 @@ The current resource kinds are:
 - json
 
 HTML and other navigable responses are fetched for discovery but are not
-gathered as resources.
+gathered as resources. URLs with known unsupported file extensions (such as
+images, stylesheets, PDFs, and ebook packages) are skipped rather than fetched.
+Supported TXT/XML/JSON candidates are prioritized ahead of extensionless HTML
+navigation, and download-provider endpoints are ignored.
 
 ## Discovery
 
