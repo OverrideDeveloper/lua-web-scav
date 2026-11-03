@@ -160,6 +160,11 @@ assert_equal(
     true,
     "retain supported OPDS XML feed"
 )
+assert_equal(
+    selective_crawler:next(),
+    "https://www.gutenberg.org/ebooks/75948.txt.utf-8",
+    "TXT is prioritized ahead of discovered feeds and HTML"
+)
 
 local host_crawler = scav.new({ scope = "same-host" })
 host_crawler:start("https://www.example.com/index.html")
