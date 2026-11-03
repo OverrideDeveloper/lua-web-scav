@@ -121,6 +121,11 @@ local function resolve_url(base_url, target)
         return nil
     end
 
+    -- A query-only reference addresses the current document, not its directory.
+    if target:sub(1, 1) == "?" then
+        return scheme .. "://" .. authority .. base_path:gsub("%?.*$", "") .. target
+    end
+
     if target:sub(1, 2) == "//" then
         return scheme .. ":" .. target
     end
@@ -211,6 +216,21 @@ local function discover_urls(body, base_url)
 
     for value in body:gmatch("[Ll][Oo][Cc]%s*=%s*[\"']([^\"']+)[\"']") do
         add(value)
+    end
+
+    -- Common download and embedded-resource attributes.
+    for _, attribute in ipairs({ "data%-href", "data%-url", "action", "poster", "formaction" }) do
+        local pattern = attribute .. "%s*=%s*[\"']([^\"']+)[\"']"
+        for value in body:gmatch(pattern) do
+            add(value)
+        end
+    end
+
+    -- srcset contains comma-separated URL/descriptor pairs.
+    for value in body:gmatch("[Ss][Rr][Cc][Ss][Ee][Tt]%s*=%s*[\"']([^\"']+)[\"']") do
+        for candidate in value:gmatch("[^,]+") do
+            add(trim(candidate):match("^(%S+)"))
+        end
     end
 
     for value in body:gmatch("https?://[%w%-%._~:/%?#%[%]@!$&'()*+,;=%%]+") do
