@@ -413,6 +413,21 @@ function Scavenger:enqueue(url)
     return true
 end
 
+function Scavenger:enqueue_priority(url)
+    url = strip_fragment(url)
+
+    if not self:allowed_url(url) or self.queued[url] then
+        return false
+    end
+
+    -- Redirect destinations must be followed before unrelated links discovered
+    -- on the source page. Otherwise a slow/large asset later in the FIFO queue
+    -- can prevent the actual document from ever being gathered.
+    self.queued[url] = true
+    table.insert(self.queue, self.position, url)
+    return true
+end
+
 function Scavenger:next()
     if self.position > #self.queue then
         return nil
@@ -478,7 +493,9 @@ function Scavenger:process(url, response, err)
 
         local redirect = location and resolve_url(url, location)
         if redirect then
-            self:enqueue(redirect)
+            self:enqueue_priority(redirect)
+        else
+            self:emit("error", "redirect response did not include a usable Location header", url)
         end
         return
     end
