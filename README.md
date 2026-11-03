@@ -84,6 +84,9 @@ The initial implementation discovers:
 - root-relative URLs
 - relative paths
 - URLs found in common href, src, url, loc, and location attributes/elements
+- download and embedded-resource attributes such as data-href, data-url, action, poster, and formaction
+- individual URLs in srcset values
+- query-only references that retain the current document path
 - a small set of nearby TXT filename mutations
 
 Redirects are followed by the scavenger rather than by the transport layer.
@@ -124,6 +127,12 @@ The URL mutation behavior is deliberately modest. It is an experiment in
 resource neighborhood discovery, not an attempt to guess every possible URL
 scheme. The library exposes the mutation function so later experiments can
 replace or extend it without changing the transport layer.
+
+Gathered resource events include the source URL, detected kind, HTTP status,
+content type when supplied, output path, and response body. The crawler waits
+for outstanding asynchronous file writes before emitting its `done` event,
+so the resource list reported at completion reflects completed writes rather
+than only completed HTTP requests.
 
 ## Vendored transport
 
