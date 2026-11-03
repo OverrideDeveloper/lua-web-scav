@@ -88,6 +88,16 @@ crawler:on("fetch", function(fetch_url)
     print("[fetch] " .. fetch_url)
 end)
 
+crawler:on("response", function(response)
+    local headers = response.headers or {}
+    local content_type = headers["content-type"] or headers["Content-Type"] or "-"
+    local location = headers["location"] or headers["Location"]
+    print(string.format("[http] %s content-type=%s%s",
+        tostring(response.status),
+        tostring(content_type),
+        location and (" location=" .. tostring(location)) or ""))
+end)
+
 crawler:on("resource", function(resource)
     print(string.format("[gathered] %s %s -> %s",
         resource.kind, resource.url, resource.path))
