@@ -453,9 +453,9 @@ function Scavenger:enqueue_discovered(url)
     -- Download-provider endpoints and EPUB package variants are not useful
     -- to this TXT/XML/JSON scavenger, and can be very large.
     if path:find("/send/", 1, true)
-        or path:find("%.epub", 1, true)
-        or path:find("%.kf8", 1, true)
-        or path:find("%.mobi", 1, true) then
+        or path:find(".epub", 1, true)
+        or path:find(".kf8", 1, true)
+        or path:find(".mobi", 1, true) then
         return false
     end
 
