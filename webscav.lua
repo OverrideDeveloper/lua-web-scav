@@ -10,12 +10,16 @@ local RESOURCE_EXTENSIONS = {
     txt = "txt",
     xml = "xml",
     json = "json",
+    rdf = "xml",
+    opds = "xml",
 }
 
 local CONTENT_TYPES = {
     ["text/plain"] = "txt",
     ["text/xml"] = "xml",
     ["application/xml"] = "xml",
+    ["application/rdf+xml"] = "xml",
+    ["application/atom+xml"] = "xml",
     ["application/json"] = "json",
     ["text/json"] = "json",
 }
@@ -428,6 +432,49 @@ function Scavenger:enqueue_priority(url)
     return true
 end
 
+local IGNORED_EXTENSIONS = {
+    css = true, ico = true, png = true, jpg = true, jpeg = true,
+    gif = true, svg = true, webp = true, bmp = true, tif = true,
+    tiff = true, avif = true,
+    epub = true, mobi = true, azw = true, azw3 = true, kf8 = true,
+    mp3 = true, mp4 = true, m4a = true, wav = true, ogg = true,
+    webm = true, zip = true, gz = true, tar = true, pdf = true,
+    woff = true, woff2 = true, ttf = true, otf = true, eot = true,
+}
+
+function Scavenger:enqueue_discovered(url)
+    url = strip_fragment(url)
+    if not self:allowed_url(url) or self.queued[url] then
+        return false
+    end
+
+    local path = (url:match("^([^?#]*)") or ""):lower()
+
+    -- Download-provider endpoints and EPUB package variants are not useful
+    -- to this TXT/XML/JSON scavenger, and can be very large.
+    if path:find("/send/", 1, true)
+        or path:find("%.epub", 1, true)
+        or path:find("%.kf8", 1, true)
+        or path:find("%.mobi", 1, true) then
+        return false
+    end
+
+    local ext = extension(url)
+    if ext and not classify_extension(url) then
+        return false
+    end
+    if ext and IGNORED_EXTENSIONS[ext] then
+        return false
+    end
+
+    -- Put known gatherable formats ahead of extensionless HTML navigation.
+    if classify_extension(url) then
+        return self:enqueue_priority(url)
+    end
+
+    return self:enqueue(url)
+end
+
 function Scavenger:next()
     if self.position > #self.queue then
         return nil
@@ -513,7 +560,7 @@ function Scavenger:process(url, response, err)
         -- Keep discovery separate from collection so XML/JSON/TXT can all
         -- participate in the next scavenging step.
         for _, discovered in ipairs(discover_urls(response.body or "", url)) do
-            self:enqueue(discovered)
+            self:enqueue_discovered(discovered)
         end
 
         if kind == "txt" then
@@ -526,7 +573,7 @@ function Scavenger:process(url, response, err)
     end
 
     for _, discovered in ipairs(discover_urls(response.body or "", url)) do
-        self:enqueue(discovered)
+        self:enqueue_discovered(discovered)
     end
 end
 
